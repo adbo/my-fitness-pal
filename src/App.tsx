@@ -1,9 +1,9 @@
 import { Routes, Route, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import HomePage from './pages/HomePage';
 import ProgressionPage from './pages/ProgressionPage';
 
-const USERNAME = 'default_user';
+// Simple user ID - in production use Firebase Auth
+const USER_ID = 'default_user';
 
 function App() {
   return (
@@ -18,8 +18,8 @@ function App() {
 
       <main className="container">
         <Routes>
-          <Route path="/" element={<HomePage username={USERNAME} />} />
-          <Route path="/progression/:chainId" element={<ProgressionPage username={USERNAME} />} />
+          <Route path="/" element={<HomePage userId={USER_ID} />} />
+          <Route path="/progression/:chainId" element={<ProgressionPage userId={USER_ID} />} />
         </Routes>
       </main>
     </div>

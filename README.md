@@ -8,60 +8,55 @@ Aplikacja webowa do śledzenia treningów z **systemem progresji ćwiczeń** - p
   - Przykład: Pompki od ściany → Pompki od blatu → Pompki na kolanach → Pełne pompki → Pompki diamentowe
 - **Śledzenie Postępów**: Śledź swój aktualny poziom w każdej progresji
 - **Automatyczne Sugestie**: Otrzymuj powiadomienia gdy jesteś gotowy na trudniejsze ćwiczenie
-- **Historia Treningów**: Przeglądaj swoje poprzednie treningi
 
 ## Architektura
 
-- **Backend**: FastAPI (Python) + SQLite
-- **Frontend**: React + TypeScript
+- **Frontend**: React + TypeScript + Vite
+- **Backend**: Firebase Firestore (bez serwera!)
 
 ## Instalacja i Uruchomienie
 
-### Backend
+### 1. Konfiguracja Firebase
+
+1. Utwórz projekt na [Firebase Console](https://console.firebase.google.com/)
+2. Włącz Firestore Database
+3. Skopiuj dane konfiguracyjne
+
+### 2. Konfiguracja aplikacji
 
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+# Skopiuj plik z przykładową konfiguracją
+cp .env.example .env
+
+# Uzupełnij dane Firebase w pliku .env
 ```
 
-Backend uruchomi się na `http://localhost:8000`
-
-### Frontend
+### 3. Uruchomienie
 
 ```bash
-cd frontend
 npm install
 npm run dev
 ```
 
-Frontend uruchomi się na `http://localhost:3000`
+Aplikacja uruchomi się na `http://localhost:3000`
 
 ## Struktura Projektu
 
 ```
 my-fitness-pal/
-├── backend/
-│   └── app/
-│       ├── api/           # Endpointy REST API
-│       ├── db/            # Konfiguracja bazy danych
-│       ├── models/        # Modele SQLAlchemy
-│       ├── schemas/       # Schematy Pydantic
-│       ├── services/      # Logika biznesowa
-│       ├── seed_data.py   # Dane początkowe
-│       └── main.py        # Główna aplikacja FastAPI
-├── frontend/
-│   └── src/
-│       ├── api/           # Klient API
-│       ├── components/    # Komponenty React
-│       ├── pages/         # Strony aplikacji
-│       └── types/         # Typy TypeScript
-└── README.md
+├── src/
+│   ├── components/     # Komponenty React
+│   ├── pages/          # Strony aplikacji
+│   ├── firebase/       # Konfiguracja i serwisy Firebase
+│   ├── data/           # Dane ćwiczeń (statyczne)
+│   └── types/          # Typy TypeScript
+├── .env.example        # Przykładowa konfiguracja
+└── package.json
 ```
 
 ## System Progresji Ćwiczeń
 
-Każde ćwiczenie należy do **łańcucha progresji**. Gdy opanujesz ćwiczenie (np. 3 serie × 12 powtórzeń), możesz przejść do kolejnego, trudniejszego wariantu:
+Każde ćwiczenie należy do **łańcucha progresji**. Gdy opanujesz ćwiczenie (3 serie × 12 powtórzeń), możesz przejść do kolejnego, trudniejszego wariantu.
 
 ### Dostępne Progresje
 
@@ -83,14 +78,18 @@ Każde ćwiczenie należy do **łańcucha progresji**. Gdy opanujesz ćwiczenie 
 6. **Progresja Wiosłowania** (6 poziomów)
    - Wiosłowanie pod kątem → Wiosłowanie poziome → Wiosłowanie szerokie → Wiosłowanie z nogami na podwyższeniu → Wiosłowanie łucznika → Wiosłowanie na jednej ręce
 
-## API Endpoints
+## Deploy
 
-- `GET /api/progressions` - Lista wszystkich progresji
-- `GET /api/progressions/{chain_id}` - Szczegóły progresji z ćwiczeniami
-- `GET /api/users/{username}/progressions` - Status wszystkich progresji użytkownika
-- `POST /api/users/{username}/progressions/{chain_id}/record` - Zapisz trening
-- `POST /api/users/{username}/progressions/{chain_id}/advance` - Przejdź do trudniejszego ćwiczenia
-- `POST /api/users/{username}/progressions/{chain_id}/regress` - Wróć do łatwiejszego ćwiczenia
+Aplikacja jest statyczna - możesz ją hostować za darmo na:
+- Firebase Hosting
+- Vercel
+- Netlify
+- GitHub Pages
+
+```bash
+npm run build
+# Folder dist/ zawiera gotową aplikację
+```
 
 ## Licencja
 

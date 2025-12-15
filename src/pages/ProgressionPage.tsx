@@ -1,19 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api } from '../api';
-import type { ProgressionStatus, ProgressionChain } from '../types';
+import { getProgression } from '../data/exercises';
+import {
+  getUserProgress,
+  recordWorkout,
+  advanceProgress,
+  regressProgress,
+  getProgressionStatus,
+} from '../firebase/progressService';
+import type { ProgressionStatus } from '../types';
+import { SETS_TO_PROGRESS, REPS_TO_PROGRESS } from '../types';
 import ExerciseList from '../components/ExerciseList';
 import WorkoutForm from '../components/WorkoutForm';
 import ExerciseDetails from '../components/ExerciseDetails';
 
 interface Props {
-  username: string;
+  userId: string;
 }
 
-export default function ProgressionPage({ username }: Props) {
+export default function ProgressionPage({ userId }: Props) {
   const { chainId } = useParams<{ chainId: string }>();
   const [status, setStatus] = useState<ProgressionStatus | null>(null);
-  const [chain, setChain] = useState<ProgressionChain | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
 
@@ -21,17 +28,21 @@ export default function ProgressionPage({ username }: Props) {
     if (chainId) {
       loadData();
     }
-  }, [chainId, username]);
+  }, [chainId, userId]);
 
   async function loadData() {
+    if (!chainId) return;
+
     try {
       setLoading(true);
-      const [statusData, chainData] = await Promise.all([
-        api.getUserProgression(username, chainId!),
-        api.getProgression(chainId!),
-      ]);
-      setStatus(statusData);
-      setChain(chainData);
+      const chain = getProgression(chainId);
+      if (!chain) {
+        setLoading(false);
+        return;
+      }
+
+      const progress = await getUserProgress(userId, chainId);
+      setStatus(getProgressionStatus(chain, progress));
     } catch (err) {
       console.error(err);
     } finally {
@@ -43,8 +54,8 @@ export default function ProgressionPage({ username }: Props) {
     if (!chainId) return;
 
     try {
-      const result = await api.recordWorkout(username, chainId, sets, reps);
-      setMessage({ text: result.message, type: result.can_progress ? 'success' : 'info' });
+      const result = await recordWorkout(userId, chainId, sets, reps);
+      setMessage({ text: result.message, type: result.canProgress ? 'success' : 'info' });
       await loadData();
     } catch (err) {
       console.error(err);
@@ -55,9 +66,13 @@ export default function ProgressionPage({ username }: Props) {
     if (!chainId) return;
 
     try {
-      const result = await api.advanceProgression(username, chainId);
-      setMessage({ text: result.message, type: 'success' });
-      await loadData();
+      const result = await advanceProgress(userId, chainId);
+      if (result.success) {
+        setMessage({ text: result.message, type: 'success' });
+        await loadData();
+      } else {
+        setMessage({ text: result.message, type: 'info' });
+      }
     } catch (err: any) {
       setMessage({ text: err.message, type: 'info' });
     }
@@ -67,9 +82,13 @@ export default function ProgressionPage({ username }: Props) {
     if (!chainId) return;
 
     try {
-      const result = await api.regressProgression(username, chainId);
-      setMessage({ text: result.message, type: 'info' });
-      await loadData();
+      const result = await regressProgress(userId, chainId);
+      if (result.success) {
+        setMessage({ text: result.message, type: 'info' });
+        await loadData();
+      } else {
+        setMessage({ text: result.message, type: 'info' });
+      }
     } catch (err: any) {
       setMessage({ text: err.message, type: 'info' });
     }
@@ -79,9 +98,12 @@ export default function ProgressionPage({ username }: Props) {
     return <div className="card">Ładowanie...</div>;
   }
 
-  if (!status || !chain) {
+  if (!status) {
     return <div className="card">Nie znaleziono progresji</div>;
   }
+
+  const currentLevel = status.progress.current_order + 1;
+  const totalLevels = status.chain.exercises.length;
 
   return (
     <div>
@@ -92,11 +114,11 @@ export default function ProgressionPage({ username }: Props) {
       <div className="card">
         <div className="card-header">
           <div>
-            <h2 className="card-title">{chain.name_pl || chain.name}</h2>
-            <p style={{ color: 'var(--gray-500)' }}>{chain.description}</p>
+            <h2 className="card-title">{status.chain.name_pl || status.chain.name}</h2>
+            <p style={{ color: 'var(--gray-500)' }}>{status.chain.description}</p>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="stat-value">{status.current_level}/{status.total_levels}</div>
+            <div className="stat-value">{currentLevel}/{totalLevels}</div>
             <div className="stat-label">Poziom</div>
           </div>
         </div>
@@ -116,15 +138,15 @@ export default function ProgressionPage({ username }: Props) {
 
         <div className="stats" style={{ marginBottom: '1.5rem' }}>
           <div className="stat">
-            <div className="stat-value">{status.best_sets}</div>
-            <div className="stat-label">Najlepsze serie (cel: {status.sets_to_progress})</div>
+            <div className="stat-value">{status.progress.best_sets}</div>
+            <div className="stat-label">Najlepsze serie (cel: {SETS_TO_PROGRESS})</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{status.best_reps}</div>
-            <div className="stat-label">Najlepsze powtórzenia (cel: {status.reps_to_progress})</div>
+            <div className="stat-value">{status.progress.best_reps}</div>
+            <div className="stat-label">Najlepsze powtórzenia (cel: {REPS_TO_PROGRESS})</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{status.total_workouts_at_level}</div>
+            <div className="stat-value">{status.progress.workouts_at_level}</div>
             <div className="stat-label">Treningów na tym poziomie</div>
           </div>
         </div>
@@ -146,7 +168,7 @@ export default function ProgressionPage({ username }: Props) {
           <button
             className="btn btn-outline"
             onClick={handleRegress}
-            disabled={status.current_level <= 1}
+            disabled={currentLevel <= 1}
           >
             Cofnij się
           </button>
@@ -166,8 +188,8 @@ export default function ProgressionPage({ username }: Props) {
             Wszystkie poziomy
           </h3>
           <ExerciseList
-            exercises={chain.exercises}
-            currentOrder={status.current_level - 1}
+            exercises={status.chain.exercises}
+            currentOrder={status.progress.current_order}
           />
         </div>
       </div>

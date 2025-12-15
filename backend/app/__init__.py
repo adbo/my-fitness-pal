@@ -1,1 +1,0 @@
-# Backend - Fitness Tracking API

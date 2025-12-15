@@ -1,29 +1,35 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
+import { PROGRESSIONS } from '../data/exercises';
+import { getAllUserProgress, getProgressionStatus } from '../firebase/progressService';
 import type { ProgressionStatus } from '../types';
 import ProgressCard from '../components/ProgressCard';
 
 interface Props {
-  username: string;
+  userId: string;
 }
 
-export default function HomePage({ username }: Props) {
-  const [progressions, setProgressions] = useState<ProgressionStatus[]>([]);
+export default function HomePage({ userId }: Props) {
+  const [statuses, setStatuses] = useState<ProgressionStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadProgressions();
-  }, [username]);
+  }, [userId]);
 
   async function loadProgressions() {
     try {
       setLoading(true);
-      const data = await api.getUserProgressions(username);
-      setProgressions(data);
+      const progressList = await getAllUserProgress(userId);
+
+      const statusList = PROGRESSIONS.map((chain, index) => {
+        return getProgressionStatus(chain, progressList[index]);
+      });
+
+      setStatuses(statusList);
     } catch (err) {
-      setError('Nie udało się załadować danych');
+      setError('Nie udało się załadować danych. Sprawdź konfigurację Firebase.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -43,13 +49,13 @@ export default function HomePage({ username }: Props) {
       <h2 style={{ marginBottom: '1.5rem' }}>Twoje Progresje</h2>
 
       <div className="grid grid-2">
-        {progressions.map((prog) => (
+        {statuses.map((status) => (
           <Link
-            key={prog.chain_id}
-            to={`/progression/${prog.chain_id}`}
+            key={status.chain.id}
+            to={`/progression/${status.chain.id}`}
             style={{ textDecoration: 'none', color: 'inherit' }}
           >
-            <ProgressCard progression={prog} />
+            <ProgressCard status={status} />
           </Link>
         ))}
       </div>
